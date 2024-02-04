@@ -1,0 +1,108 @@
+pip install sqlalchemy pymysql
+
+
+from sqlalchemy import create_engine, Column, Integer, String, Text
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+
+Base = declarative_base()
+
+class Receta(Base):
+    __tablename__ = 'recetas'
+
+    id = Column(Integer, primary_key=True)
+    nombre = Column(String, nullable=False)
+    ingredientes = Column(Text, nullable=False)
+    pasos = Column(Text, nullable=False)
+
+# Configuración de la conexión a MariaDB
+URL_BASE_DE_DATOS = "mysql+pymysql://usuario:contraseña@localhost/nombre_de_la_base_de_datos"
+motor = create_engine(URL_BASE_DE_DATOS, echo=True)
+
+# Crear la tabla si no existe
+Base.metadata.create_all(bind=motor)
+
+# Crear una sesión
+Sesion = sessionmaker(bind=motor)
+sesion = Sesion()
+
+# Función para agregar una nueva receta
+def agregar_receta(nombre, ingredientes, pasos):
+    receta = Receta(nombre=nombre, ingredientes=ingredientes, pasos=pasos)
+    sesion.add(receta)
+    sesion.commit()
+
+# Función para actualizar una receta existente
+def actualizar_receta(id_receta, nombre, ingredientes, pasos):
+    receta = sesion.query(Receta).filter_by(id=id_receta).first()
+    if receta:
+        receta.nombre = nombre
+        receta.ingredientes = ingredientes
+        receta.pasos = pasos
+        sesion.commit()
+
+# Función para eliminar una receta existente
+def eliminar_receta(id_receta):
+    receta = sesion.query(Receta).filter_by(id=id_receta).first()
+    if receta:
+        sesion.delete(receta)
+        sesion.commit()
+
+# Función para obtener todas las recetas
+def obtener_recetas():
+    recetas = sesion.query(Receta).all()
+    return recetas
+
+# Función para buscar ingredientes y pasos de una receta por nombre
+def buscar_receta(nombre):
+    receta = sesion.query(Receta).filter_by(nombre=nombre).first()
+    if receta:
+        return receta.ingredientes, receta.pasos
+    else:
+        return None
+
+if __name__ == '__main__':
+    while True:
+        print("\nOpciones:")
+        print("a) Agregar una nueva receta")
+        print("b) Actualizar una receta existente")
+        print("c) Eliminar una receta existente")
+        print("d) Ver lista de recetas")
+        print("e) Buscar ingredientes y pasos de una receta")
+        print("f) Salir")
+
+        opcion = input("Seleccione una opción: ").lower()
+
+        if opcion == 'a':
+            nombre = input("Nombre de la receta: ")
+            ingredientes = input("Ingredientes: ")
+            pasos = input("Pasos: ")
+            agregar_receta(nombre, ingredientes, pasos)
+
+        elif opcion == 'b':
+            id_receta = input("ID de la receta a actualizar: ")
+            nombre = input("Nuevo nombre de la receta: ")
+            ingredientes = input("Nuevos ingredientes: ")
+            pasos = input("Nuevos pasos: ")
+            actualizar_receta(id_receta, nombre, ingredientes, pasos)
+
+        elif opcion == 'c':
+            id_receta = input("ID de la receta a eliminar: ")
+            eliminar_receta(id_receta)
+
+        elif opcion == 'd':
+            recetas = obtener_recetas()
+            for receta in recetas:
+                print(f"ID: {receta.id}, Nombre: {receta.nombre}")
+
+        elif opcion == 'e':
+            nombre = input("Nombre de la receta a buscar: ")
+            resultado = buscar_receta(nombre)
+            if resultado:
+                print(f"Ingredientes: {resultado[0]}\nPasos: {resultado[1]}")
+            else:
+                print("Receta no encontrada.")
+
+        elif opcion == 'f':
+            break
+
